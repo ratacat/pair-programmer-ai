@@ -62,23 +62,73 @@ export interface BridgeResponse {
 }
 
 /**
+ * Supported pair agent backends.
+ * - claude-opus: Claude Opus via Task tool (runs in same Claude Code session)
+ * - codex: OpenAI Codex via `codex` CLI (spawned as subprocess)
+ */
+export type PairAgentBackend = 'claude-opus' | 'codex';
+
+/**
  * Configuration for the pair programming system.
  * Stored in ~/.claude/settings.json under the "pair" key.
  */
 export interface PairConfig {
+  /** Suggest pairing for complex tasks */
   auto_suggest: boolean;
+  /** Suggest after N file edits planned */
   auto_suggest_threshold: number;
+  /** How much feedback to show: quiet (high only), normal (high+medium), verbose (all) */
   feedback_verbosity: 'quiet' | 'normal' | 'verbose';
-  pair_model: string;
+  /** Default pair agent backend */
+  default_backend: PairAgentBackend;
 }
 
 /**
  * Adapter interface for different AI model backends.
- * Implement this to add support for new pair programming agents.
+ *
+ * The main agent (Claude Code) always runs the bridge and hooks.
+ * The pair agent is spawned via an adapter and communicates through the bridge.
+ *
+ * Implementations:
+ * - ClaudeOpusAdapter: Uses Task tool to spawn Opus as a background agent
+ * - CodexAdapter: Spawns `codex` CLI as a subprocess with the pair prompt
  */
 export interface AgentAdapter {
-  name: string;
+  /** Display name for this backend */
+  readonly name: string;
+
+  /** Backend identifier */
+  readonly backend: PairAgentBackend;
+
+  /**
+   * Spawn the pair agent.
+   * @param sessionId - Bridge session ID for socket path
+   * @param systemPrompt - The pair programmer system prompt
+   * @returns Promise that resolves when agent is running
+   */
   spawn(sessionId: string, systemPrompt: string): Promise<void>;
+
+  /**
+   * Stop the pair agent gracefully.
+   * Should send stop signal and wait for cleanup.
+   */
   stop(): Promise<void>;
+
+  /** Check if the pair agent process is still running */
   isRunning(): boolean;
+
+  /** Get the process ID or task ID for monitoring */
+  getProcessId(): string | undefined;
+}
+
+/**
+ * Options for spawning a pair session.
+ */
+export interface PairSessionOptions {
+  /** Which backend to use for the pair agent */
+  backend: PairAgentBackend;
+  /** Override the default system prompt */
+  customPrompt?: string;
+  /** Run in verbose mode (show all feedback) */
+  verbose?: boolean;
 }
