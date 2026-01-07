@@ -2,6 +2,7 @@
   "name": "pair-bridge",
   "version": "0.1.0",
   "description": "A bridge server enabling two AI agents to pair program together",
+  "type": "module",
   "main": "dist/cli.js",
   "bin": {
     "pair-bridge": "./bin/pair-bridge"

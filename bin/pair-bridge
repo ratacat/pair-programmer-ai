@@ -2,4 +2,7 @@
 // ABOUTME: CLI entry point for pair-bridge
 // ABOUTME: Forwards to the compiled CLI module
 
-import('../dist/cli.js');
+async function main() {
+  await import('../dist/cli.js');
+}
+main();
