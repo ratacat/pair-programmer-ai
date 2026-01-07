@@ -1,0 +1,39 @@
+{
+  "name": "pair-bridge",
+  "version": "0.1.0",
+  "description": "A bridge server enabling two AI agents to pair program together",
+  "main": "dist/cli.js",
+  "bin": {
+    "pair-bridge": "./bin/pair-bridge"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/server.js",
+    "cli": "node dist/cli.js",
+    "install-hooks": "bash skill/install.sh",
+    "test": "vitest",
+    "lint": "eslint src/**/*.ts",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "ai",
+    "pair-programming",
+    "claude",
+    "agent",
+    "llm"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0",
+    "eslint": "^8.55.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
