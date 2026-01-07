@@ -4,9 +4,34 @@
   "description": "A bridge server enabling two AI agents to pair program together",
   "type": "module",
   "main": "dist/cli.js",
+  "types": "dist/types.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/cli.js",
+      "types": "./dist/types.d.ts"
+    },
+    "./server": {
+      "import": "./dist/server.js",
+      "types": "./dist/server.d.ts"
+    },
+    "./session": {
+      "import": "./dist/session.js",
+      "types": "./dist/session.d.ts"
+    },
+    "./adapters": {
+      "import": "./dist/adapters/index.js",
+      "types": "./dist/adapters/index.d.ts"
+    }
+  },
   "bin": {
     "pair-bridge": "./bin/pair-bridge"
   },
+  "files": [
+    "dist",
+    "bin",
+    "hooks",
+    "skill"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
@@ -15,17 +40,29 @@
     "install-hooks": "bash skill/install.sh",
     "test": "vitest",
     "lint": "eslint src/**/*.ts",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build"
   },
   "keywords": [
     "ai",
     "pair-programming",
     "claude",
+    "codex",
     "agent",
-    "llm"
+    "llm",
+    "code-review",
+    "pair-bridge"
   ],
   "author": "",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ratacat/pair-programmer-ai.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ratacat/pair-programmer-ai/issues"
+  },
+  "homepage": "https://github.com/ratacat/pair-programmer-ai#readme",
   "devDependencies": {
     "@types/node": "^20.10.0",
     "typescript": "^5.3.0",

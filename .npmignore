@@ -1,0 +1,12 @@
+src/
+*.ts
+!*.d.ts
+.beads/
+.git/
+.gitignore
+node_modules/
+tsconfig.json
+*.log
+.DS_Store
+coverage/
+docs/
