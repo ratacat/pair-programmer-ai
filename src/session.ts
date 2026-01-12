@@ -1,5 +1,5 @@
-// ABOUTME: Session manager that orchestrates pair programming sessions
-// ABOUTME: Handles bridge lifecycle, adapter spawning, and session state
+// ABOUTME: Session manager for programmatic pair-bridge usage
+// ABOUTME: Handles bridge lifecycle and adapter spawning for CLI backends
 
 import { randomBytes } from 'crypto';
 import { existsSync, readFileSync } from 'fs';
@@ -12,7 +12,7 @@ const PAIR_AGENT_PROMPT_PATH = new URL('../skill/pair-agent-prompt.md', import.m
 interface ActiveSession {
   id: string;
   bridge: BridgeServer;
-  adapter: AgentAdapter;
+  adapter: AgentAdapter | null;
   startedAt: Date;
   backend: PairAgentBackend;
 }
@@ -47,11 +47,16 @@ Focus on bugs, security issues, and missed edge cases.`;
 
 /**
  * Start a new pair programming session.
+ *
+ * For 'codex' backend: Spawns a Codex subprocess via adapter.
+ * For 'claude-opus' backend: Only starts the bridge. The pair agent must be
+ * spawned separately via Claude Code's Task tool (see skill.md).
  */
 export async function startSession(options: Partial<PairSessionOptions> = {}): Promise<{
   sessionId: string;
   socketPath: string;
   backend: PairAgentBackend;
+  adapterSpawned: boolean;
 }> {
   if (activeSession) {
     throw new Error(`Session already active: ${activeSession.id}`);
@@ -64,17 +69,25 @@ export async function startSession(options: Partial<PairSessionOptions> = {}): P
   const bridge = new BridgeServer(sessionId);
   await bridge.start();
 
-  // Create and spawn the adapter
-  const adapter = createAdapter(backend);
-  const systemPrompt = options.customPrompt || loadPairAgentPrompt();
+  let adapter: AgentAdapter | null = null;
+  let adapterSpawned = false;
 
-  try {
-    await adapter.spawn(sessionId, systemPrompt);
-  } catch (err) {
-    // Clean up bridge if adapter fails to spawn
-    await bridge.stop();
-    throw err;
+  // Only spawn adapter for CLI-available backends
+  if (backend === 'codex') {
+    adapter = createAdapter(backend);
+    const systemPrompt = options.customPrompt || loadPairAgentPrompt();
+
+    try {
+      await adapter.spawn(sessionId, systemPrompt);
+      adapterSpawned = true;
+    } catch (err) {
+      // Clean up bridge if adapter fails to spawn
+      await bridge.stop();
+      throw err;
+    }
   }
+  // For 'claude-opus', only the bridge is started.
+  // The pair agent must be spawned via Claude Code's Task tool.
 
   activeSession = {
     id: sessionId,
@@ -91,6 +104,7 @@ export async function startSession(options: Partial<PairSessionOptions> = {}): P
     sessionId,
     socketPath: bridge.getSocketPath(),
     backend,
+    adapterSpawned,
   };
 }
 
@@ -109,19 +123,15 @@ export async function stopSession(): Promise<{
   const { id, bridge, adapter, startedAt } = activeSession;
 
   // Get final status before stopping
-  let status: BridgeStatus | null = null;
-  try {
-    // We'd need to query the bridge for status, but since we're stopping,
-    // let's just calculate duration
-  } catch {
-    // Ignore errors getting status
-  }
+  const status: BridgeStatus | null = null;
 
-  // Stop adapter first (graceful shutdown)
-  try {
-    await adapter.stop();
-  } catch {
-    // Continue with bridge stop even if adapter fails
+  // Stop adapter if one was spawned
+  if (adapter) {
+    try {
+      await adapter.stop();
+    } catch {
+      // Continue with bridge stop even if adapter fails
+    }
   }
 
   // Stop bridge
@@ -162,7 +172,7 @@ export function getSessionStatus(): {
     backend: activeSession.backend,
     socketPath: activeSession.bridge.getSocketPath(),
     uptime: Math.floor((Date.now() - activeSession.startedAt.getTime()) / 1000),
-    pairRunning: activeSession.adapter.isRunning(),
+    pairRunning: activeSession.adapter?.isRunning() ?? false,
   };
 }
 

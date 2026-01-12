@@ -1,0 +1,15 @@
+{
+  "name": "pair",
+  "version": "0.1.0",
+  "description": "Launch a pair programming agent to watch your work and catch issues",
+  "commands": [
+    {
+      "name": "pair",
+      "description": "Start, stop, or check pair programming sessions",
+      "source": "./skill.md"
+    }
+  ],
+  "hooks": {
+    "postInstall": "./install.sh"
+  }
+}

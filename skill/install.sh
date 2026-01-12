@@ -25,8 +25,10 @@ fi
 echo "Installing hooks to $HOOKS_DIR..."
 cp "$PROJECT_DIR/hooks/pair-emit-activity.sh" "$HOOKS_DIR/"
 cp "$PROJECT_DIR/hooks/pair-check-feedback.sh" "$HOOKS_DIR/"
+cp "$PROJECT_DIR/hooks/pair-user-prompt.sh" "$HOOKS_DIR/"
 chmod +x "$HOOKS_DIR/pair-emit-activity.sh"
 chmod +x "$HOOKS_DIR/pair-check-feedback.sh"
+chmod +x "$HOOKS_DIR/pair-user-prompt.sh"
 
 # Create symlink for CLI
 echo "Installing CLI to $BIN_DIR..."
@@ -55,6 +57,7 @@ echo ""
 echo "Hooks installed:"
 echo "  $HOOKS_DIR/pair-emit-activity.sh (PostToolUse)"
 echo "  $HOOKS_DIR/pair-check-feedback.sh (PreToolUse)"
+echo "  $HOOKS_DIR/pair-user-prompt.sh (UserPromptSubmit)"
 echo ""
 echo "CLI installed:"
 echo "  $BIN_DIR/pair-bridge"
@@ -63,7 +66,8 @@ echo "To start using, configure Claude Code hooks in ~/.claude/settings.json:"
 echo '  {'
 echo '    "hooks": {'
 echo '      "PostToolUse": ["pair-emit-activity.sh"],'
-echo '      "PreToolUse": ["pair-check-feedback.sh"]'
+echo '      "PreToolUse": ["pair-check-feedback.sh"],'
+echo '      "UserPromptSubmit": ["pair-user-prompt.sh"]'
 echo '    }'
 echo '  }'
 echo ""

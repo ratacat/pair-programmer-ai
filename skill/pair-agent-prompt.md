@@ -51,7 +51,10 @@ Run this loop continuously:
 
 ## What You See
 
-Each activity event contains:
+You receive two types of events:
+
+### Tool Activity Events
+When the main agent uses a tool:
 ```json
 {
   "type": "activity",
@@ -63,6 +66,20 @@ Each activity event contains:
   "timestamp": "2024-01-15T10:30:00Z"
 }
 ```
+
+### User Prompt Events
+When the user sends a message to the main agent:
+```json
+{
+  "type": "prompt",
+  "content": "The user's message to the main agent",
+  "sequence": 1,
+  "session_id": "abc123",
+  "timestamp": "2024-01-15T10:30:05Z"
+}
+```
+
+Prompt events give you context about what the user asked for, helping you understand the intent behind the tool calls.
 
 ## Feedback Format
 

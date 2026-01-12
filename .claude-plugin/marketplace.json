@@ -1,0 +1,15 @@
+{
+  "name": "pair-programmer-ai",
+  "description": "AI pair programming tools for Claude Code",
+  "owner": {
+    "name": "ratacat",
+    "url": "https://github.com/ratacat"
+  },
+  "plugins": [
+    {
+      "name": "pair",
+      "source": "./skill",
+      "description": "Launch a pair programming agent to watch your work and catch issues"
+    }
+  ]
+}

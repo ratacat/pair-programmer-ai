@@ -145,17 +145,18 @@ export class BridgeServer {
       return;
     }
 
-    if (message.payload.type === 'activity') {
-      const activity: ActivityEvent = {
+    if (message.payload.type === 'activity' || message.payload.type === 'prompt') {
+      // Both activity and prompt events go to the pair agent
+      const event: ActivityEvent = {
         ...message.payload,
         sequence: this.session.activities.length,
         session_id: this.session.id,
       };
-      this.session.activities.push(activity);
+      this.session.activities.push(event);
 
       // Notify any waiting pair agents
       for (const waiter of this.session.pairWaiters) {
-        waiter.write(JSON.stringify([activity]) + '\n');
+        waiter.write(JSON.stringify([event]) + '\n');
       }
       this.session.pairWaiters = [];
 

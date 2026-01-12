@@ -14,70 +14,164 @@ Launch a pair programming session where a second AI agent watches your work and 
 
 ## Commands
 
-- `/pair` or `/pair start` - Start a pair programming session
+- `/pair` or `/pair start` - Start with default backend (opus)
+- `/pair opus` - Start with Claude Opus as pair (Task tool)
+- `/pair codex` - Start with Codex as pair (background CLI)
 - `/pair stop` - End the current session
 - `/pair status` - Check if pairing is active
-- `/pair --backend <name>` - Start with specific backend (claude-opus or codex)
-
-## How It Works
-
-1. **Bridge Server**: A Unix socket server routes messages between you (main agent) and the pair agent
-2. **Activity Streaming**: Your tool calls are streamed to the pair agent in real-time
-3. **Feedback Injection**: Pair agent feedback appears before your next action
 
 ## Starting a Session
 
-When the user invokes `/pair` or asks to pair program:
+When the user invokes `/pair`:
 
-1. Generate a unique session ID
-2. Start the bridge server:
+### Step 1: Generate Session ID
+
+```bash
+SESSION_ID=$(openssl rand -hex 4)
+echo "Session ID: $SESSION_ID"
+```
+
+### Step 2: Start the Bridge Server
+
+```bash
+SESSION_ID="$SESSION_ID" pair-bridge start
+```
+
+Verify it started:
+```bash
+SESSION_ID="$SESSION_ID" pair-bridge status
+```
+
+### Step 3: Spawn the Pair Agent
+
+**Determine the backend** from the command (default is `opus`):
+- `/pair` or `/pair opus` → Use Task tool
+- `/pair codex` → Use Bash background process
+
+#### For Opus (default): Use Task Tool
+
+Spawn the pair agent using the Task tool with these parameters:
+- `subagent_type`: "general-purpose"
+- `model`: "opus"
+- `run_in_background`: true
+- `prompt`: The pair programmer prompt below
+
+**Pair Programmer Prompt for Task Tool:**
+```
+You are a pair programmer watching another Claude agent work. Your job is to catch bugs, security issues, and missed edge cases.
+
+## Connection
+Session ID: {SESSION_ID}
+Socket: /tmp/claude-pair-{SESSION_ID}.sock
+
+## Your Loop
+
+Run this continuously:
+
+1. Wait for activity:
    ```bash
-   pair-bridge start
+   SESSION_ID="{SESSION_ID}" pair-bridge wait $LAST_SEEN
    ```
-3. Spawn the pair agent using the Task tool with `run_in_background: true`
-4. Confirm to user that pairing is active
+   This blocks until the main agent does something. Start with LAST_SEEN=0.
 
-Example spawn prompt for the pair agent:
+2. Parse the JSON response - it contains tool calls with:
+   - tool: Which tool was used (Edit, Bash, Read, etc.)
+   - input: The tool's parameters
+   - output_summary: First 2KB of output
+   - sequence: Incrementing ID (use as next LAST_SEEN)
+
+3. Analyze for issues:
+   - Bugs or logic errors
+   - Security vulnerabilities
+   - Missed edge cases
+   - Breaking API changes
+   - Missing test updates
+
+4. If you spot an issue, emit feedback:
+   ```bash
+   SESSION_ID="{SESSION_ID}" pair-bridge emit feedback '{"severity":"high","message":"Description","context":{"file":"path.ts","line":42}}'
+   ```
+
+5. Update LAST_SEEN and loop back to step 1.
+
+## Severity Levels
+- high: Stop and fix now (security, data loss, breaking changes)
+- medium: Fix soon (missing error handling, test gaps)
+- low: Consider later (minor style issues)
+
+## Guidelines
+- Stay quiet on routine operations
+- Quality over quantity - one good catch beats ten nitpicks
+- Ask questions if intent is unclear
+- Focus on what the main agent might miss
+
+Begin watching now.
 ```
-You are a pair programmer watching another agent work. Connect to the bridge
-at /tmp/claude-pair-{session_id}.sock and run the watch loop:
 
-1. Use `pair-bridge wait` to block until activity
-2. Analyze each tool call for issues
-3. Use `pair-bridge emit feedback '{"severity":"high|medium|low","message":"..."}' when you spot problems
-4. Stay quiet on routine operations
+#### For Codex: Use Bash Background Process
 
-Focus on: bugs, security issues, missed edge cases, API contract changes.
+Spawn Codex as a background process:
+
+```bash
+codex --quiet "You are a pair programmer. Session: {SESSION_ID}. Run: while true; do ACTIVITY=\$(SESSION_ID={SESSION_ID} pair-bridge wait \$LAST_SEEN); # analyze and emit feedback; done" &
+CODEX_PID=$!
+echo "Codex pair agent started with PID: $CODEX_PID"
 ```
+
+Store the PID for later cleanup.
+
+### Step 4: Confirm to User
+
+Tell the user:
+- Session ID
+- Which backend is running
+- That their pair will provide feedback as they work
 
 ## Stopping a Session
 
-When the user says `/pair stop` or ends pairing:
+When the user says `/pair stop`:
 
 1. Stop the bridge server:
    ```bash
-   pair-bridge stop
+   SESSION_ID="$SESSION_ID" pair-bridge stop
    ```
-2. The pair agent will receive a stop signal and exit
-3. Summarize what the pair observed (activity count, feedback given)
 
-## Backend Selection
+2. If using Codex, kill the background process:
+   ```bash
+   kill $CODEX_PID 2>/dev/null
+   ```
 
-The pair agent can be:
-- **claude-opus** (default): Spawns Opus via Task tool
-- **codex**: Spawns OpenAI Codex via CLI
+3. Summarize the session (activity count, feedback given)
 
-Set default in config or override with `--backend`:
+## Checking Status
+
+When the user says `/pair status`:
+
+```bash
+SESSION_ID="$SESSION_ID" pair-bridge status
 ```
-/pair --backend codex
+
+Report:
+- Whether pairing is active
+- Session uptime
+- Activity count
+- Pending feedback count
+
+## How Feedback Appears
+
+The hooks handle feedback injection automatically:
+- `pair-emit-activity.sh` (PostToolUse): Sends your tool calls to the bridge
+- `pair-check-feedback.sh` (PreToolUse): Shows pair feedback before your next action
+
+When the pair spots an issue, you'll see:
 ```
-
-## Implementation Notes
-
-- Hooks (`pair-emit-activity.sh`, `pair-check-feedback.sh`) handle the main agent side
-- The skill's job is session lifecycle, not message passing
-- Pair agent runs in background and may outlive individual tool calls
-- Session state is in the bridge server, not the skill
+<pair-feedback>
+PAIR PROGRAMMER FEEDBACK:
+This SQL query concatenates user input - use parameterized queries
+Location: src/db/queries.ts:45
+SEVERITY: HIGH - Address before continuing
+</pair-feedback>
+```
 
 ## Example Session
 
@@ -85,30 +179,33 @@ Set default in config or override with `--backend`:
 User: /pair
 
 Agent: Starting pair programming session...
-  - Bridge started on /tmp/claude-pair-abc123.sock
-  - Launching pair programmer (claude-opus)
-  - Pair programming active!
+  Session ID: a1b2c3d4
+  Bridge: /tmp/claude-pair-a1b2c3d4.sock
+  Backend: opus (Task tool)
 
-Your pair will watch your work and provide feedback on issues.
+[Spawns background Task with pair programmer prompt]
 
-User: Refactor the auth module
+Pair programming active! I'll work on your task while my pair watches for issues.
 
-Agent: [Works on refactoring...]
+User: Refactor the auth module to use JWT
+
+Agent: [Reads files, makes edits...]
 
 <pair-feedback>
 PAIR PROGRAMMER FEEDBACK:
-You removed the rate limiting middleware - this was protecting against brute force attacks.
+You removed the rate limiting check - this protected against brute force attacks.
 Location: src/auth/login.ts:45
 SEVERITY: HIGH - Address before continuing
 </pair-feedback>
 
-Agent: Good catch! Let me restore that rate limiting...
+Agent: Good catch from my pair! Let me restore that rate limiting...
 
 User: /pair stop
 
 Agent: Ending pair programming session...
-  - Session lasted 12 minutes
-  - 34 tool calls observed
-  - 2 feedback items provided (1 high, 1 medium)
-  - All high-priority items addressed
+  Duration: 12 minutes
+  Tool calls observed: 34
+  Feedback provided: 2 (1 high, 1 medium)
+
+Session ended.
 ```

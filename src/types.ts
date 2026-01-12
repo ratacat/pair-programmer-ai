@@ -1,7 +1,7 @@
 // ABOUTME: Shared type definitions for the pair-bridge protocol
 // ABOUTME: Defines activity events, feedback events, and control messages
 
-export interface ActivityEvent {
+export interface ToolActivityEvent {
   type: 'activity';
   timestamp: string;
   tool: string;
@@ -10,6 +10,21 @@ export interface ActivityEvent {
   sequence: number;
   session_id: string;
 }
+
+export interface PromptEvent {
+  type: 'prompt';
+  timestamp: string;
+  content: string;
+  sequence: number;
+  session_id: string;
+}
+
+/**
+ * Events sent to the pair agent.
+ * - activity: Tool calls from the main agent
+ * - prompt: User prompts (gives pair agent context about what was asked)
+ */
+export type ActivityEvent = ToolActivityEvent | PromptEvent;
 
 export interface FeedbackEvent {
   type: 'feedback';
@@ -84,13 +99,15 @@ export interface PairConfig {
 }
 
 /**
- * Adapter interface for different AI model backends.
+ * Adapter interface for spawning external AI model backends.
  *
  * The main agent (Claude Code) always runs the bridge and hooks.
- * The pair agent is spawned via an adapter and communicates through the bridge.
+ * The pair agent communicates through the bridge.
+ *
+ * For Claude Opus: Use Task tool directly in the skill (no adapter needed).
+ * For external models: Use an adapter to spawn a subprocess.
  *
  * Implementations:
- * - ClaudeOpusAdapter: Uses Task tool to spawn Opus as a background agent
  * - CodexAdapter: Spawns `codex` CLI as a subprocess with the pair prompt
  */
 export interface AgentAdapter {
