@@ -4,6 +4,7 @@
 
 set -euo pipefail
 
+PAIR_BRIDGE="${CLAUDE_PLUGIN_ROOT:-$(dirname "$(dirname "$0")")}/bin/pair-bridge"
 SESSION_ID="${CLAUDE_SESSION_ID:-default}"
 SOCKET="/tmp/claude-pair-${SESSION_ID}.sock"
 
@@ -28,7 +29,7 @@ INPUT_JSON=$(echo "$TOOL_INPUT" | jq -c '.' 2>/dev/null || echo '{}')
 OUTPUT_JSON=$(echo "$TOOL_OUTPUT" | head -c 2000 | jq -Rs '.' 2>/dev/null || echo '""')
 
 # Emit to bridge (suppress errors - don't break main agent workflow)
-SESSION_ID="$SESSION_ID" pair-bridge emit activity "{
+SESSION_ID="$SESSION_ID" "$PAIR_BRIDGE" emit activity "{
   \"tool\": \"$TOOL_NAME\",
   \"input\": $INPUT_JSON,
   \"output_summary\": $OUTPUT_JSON

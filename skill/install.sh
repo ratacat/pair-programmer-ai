@@ -1,15 +1,23 @@
 #!/bin/bash
-# ABOUTME: Installs pair-bridge hooks and CLI to the user's system
-# ABOUTME: Copies hooks to ~/.claude/hooks/ and ensures pair-bridge is in PATH
+# ABOUTME: Manual installation script for standalone (non-plugin) installs
+# ABOUTME: Not needed when installed via /plugin install
 
 set -euo pipefail
 
+# If installed as plugin, nothing to do
+if [[ -n "${CLAUDE_PLUGIN_ROOT:-}" ]]; then
+  echo "Installed as plugin - no additional setup needed."
+  echo "Use '/pair' in Claude Code to start a pairing session."
+  exit 0
+fi
+
+# Standalone manual install follows
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 HOOKS_DIR="${CLAUDE_HOOKS_DIR:-$HOME/.claude/hooks}"
 BIN_DIR="${HOME}/.local/bin"
 
-echo "Installing pair-bridge..."
+echo "Installing pair-bridge (standalone mode)..."
 
 # Create directories
 mkdir -p "$HOOKS_DIR"
@@ -52,7 +60,7 @@ if ! command -v jq &>/dev/null; then
 fi
 
 echo ""
-echo "pair-bridge installed successfully!"
+echo "pair-bridge installed successfully (standalone mode)!"
 echo ""
 echo "Hooks installed:"
 echo "  $HOOKS_DIR/pair-emit-activity.sh (PostToolUse)"

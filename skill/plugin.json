@@ -10,6 +10,20 @@
     }
   ],
   "hooks": {
-    "postInstall": "./install.sh"
+    "PostToolUse": [
+      {
+        "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pair-emit-activity.sh"
+      }
+    ],
+    "PreToolUse": [
+      {
+        "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pair-check-feedback.sh"
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pair-user-prompt.sh"
+      }
+    ]
   }
 }

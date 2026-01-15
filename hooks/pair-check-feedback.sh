@@ -2,6 +2,7 @@
 # ABOUTME: PreToolUse hook that checks for and displays pair feedback
 # ABOUTME: Outputs feedback to stdout which gets injected into agent context
 
+PAIR_BRIDGE="${CLAUDE_PLUGIN_ROOT:-$(dirname "$(dirname "$0")")}/bin/pair-bridge"
 SESSION_ID="${CLAUDE_SESSION_ID:-default}"
 SOCKET="/tmp/claude-pair-${SESSION_ID}.sock"
 
@@ -14,7 +15,7 @@ if ! command -v jq &>/dev/null; then
 fi
 
 # Poll for pending feedback (non-blocking)
-FEEDBACK=$(SESSION_ID="$SESSION_ID" pair-bridge poll 2>/dev/null || echo "")
+FEEDBACK=$(SESSION_ID="$SESSION_ID" "$PAIR_BRIDGE" poll 2>/dev/null || echo "")
 
 # Display feedback if present
 if [[ -n "$FEEDBACK" && "$FEEDBACK" != "null" ]]; then
